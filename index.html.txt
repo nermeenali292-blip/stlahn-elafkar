@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متجر لحن الأفكار</title>
+    <style>
+        :root { --primary: #6d4c41; --accent: #ff5722; --success: #4caf50; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background-color: #f4f4f4; }
+        header { background: var(--primary); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
+        .cart-icon { cursor: pointer; font-size: 1.8rem; position: relative; }
+        #cart-count { background: var(--accent); border-radius: 50%; padding: 2px 7px; font-size: 0.8rem; position: absolute; top: -5px; right: -10px; }
+        
+        .container { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 20px; }
+        .book-card { background: white; border-radius: 10px; padding: 15px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .book-card img { width: 100%; height: 200px; object-fit: cover; border-radius: 5px; }
+        .add-btn { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px; }
+
+        /* نافذة مراجعة الطلب */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); }
+        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 90%; max-width: 500px; border-radius: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        .user-info input { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+        .confirm-btn { background: var(--success); color: white; width: 100%; padding: 15px; border: none; border-radius: 5px; font-size: 1.1rem; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>لحن الأفكار 📚</h1>
+    <div class="cart-icon" onclick="openCart()">🛒<span id="cart-count">0</span></div>
+</header>
+
+<div class="container">
+    <div class="book-card">
+        <img src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400" alt="كتاب">
+        <h3>رواية لحن الأفكار</h3>
+        <p>150 ج.م</p>
+        <button class="add-btn" onclick="addToCart('رواية لحن الأفكار', 150)">إضافة للسلة</button>
+    </div>
+</div>
+
+<div id="cart-modal" class="modal">
+    <div class="modal-content">
+        <span onclick="closeCart()" style="float:left; cursor:pointer;">✖</span>
+        <h2>مراجعة طلبك 📋</h2>
+        <table id="review-table">
+            <thead>
+                <tr><th>الكتاب</th><th>الكمية</th><th>السعر</th></tr>
+            </thead>
+            <tbody id="cart-items"></tbody>
+        </table>
+        <h3 id="total-price-display"></h3>
+        
+        <div class="user-info">
+            <h3>بيانات التوصيل 🚚</h3>
+            <input type="text" id="user-name" placeholder="اسمك بالكامل">
+            <input type="text" id="user-phone" placeholder="رقم الموبايل">
+        </div>
+        
+        <button class="confirm-btn" onclick="sendOrder()">تأكيد الطلب وإرساله (واتساب) 🔔</button>
+    </div>
+</div>
+
+<audio id="bell" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+
+<script>
+    let cart = [];
+    const myNumber = "201012345678"; // <--- غيري ده لرقمك الحقيقي
+
+    function addToCart(name, price) {
+        let item = cart.find(i => i.name === name);
+        if (item) item.quantity++; else cart.push({name, price, quantity: 1});
+        updateCartCount();
+    }
+
+    function updateCartCount() {
+        document.getElementById('cart-count').innerText = cart.reduce((a, b) => a + b.quantity, 0);
+    }
+
+    function openCart() {
+        const itemsBody = document.getElementById('cart-items');
+        itemsBody.innerHTML = '';
+        let total = 0;
+        cart.forEach(item => {
+            total += (item.price * item.quantity);
+            itemsBody.innerHTML += `<tr><td>${item.name}</td><td>${item.quantity}</td><td>${item.price * item.quantity} ج.م</td></tr>`;
+        });
+        document.getElementById('total-price-display').innerText = "الإجمالي: " + total + " ج.م";
+        document.getElementById('cart-modal').style.display = 'block';
+    }
+
+    function closeCart() { document.getElementById('cart-modal').style.display = 'none'; }
+
+    function sendOrder() {
+        const name = document.getElementById('user-name').value;
+        const phone = document.getElementById('user-phone').value;
+        
+        if(!name || !phone || cart.length === 0) {
+            alert("من فضلك كملي البيانات وتأكدي إن السلة فيها كتب!");
+            return;
+        }
+
+        document.getElementById('bell').play();
+
+        // تجهيز رسالة الواتساب للبائع
+        let message = `طلب جديد من: ${name}%0Aالموبايل: ${phone}%0A%0Aالطلبات:%0A`;
+        cart.forEach(item => {
+            message += `- ${item.name} (عدد: ${item.quantity})%0A`;
+        });
+        message += `%0Aالإجمالي: ${document.getElementById('total-price-display').innerText}`;
+
+        const whatsappURL = `https://wa.me/${myNumber}?text=${message}`;
+        window.open(whatsappURL, '_blank');
+        
+        cart = []; updateCartCount(); closeCart();
+    }
+</script>
+</body>
+</html>
